@@ -1,4 +1,12 @@
+```@meta
+CurrentModule = SubBottomProfiler
+```
+
 # Processing Reference
+
+```@setup processing
+using SubBottomProfiler
+```
 
 All processing steps follow the same interface:
 
@@ -12,205 +20,111 @@ At the dataset level:
 process_dataset(dataset::Dataset, params) -> Dataset
 ```
 
+```@docs
+process
+process_dataset
+```
+
 ## Pipeline Registration
 
-Processing steps are registered by name and can be used in:
+Registered processing steps can be used directly from Julia pipelines or TOML workflow files.
 
-- `ProcessingPipeline`
-- TOML workflow files loaded with `load_workflow`
-
-Example:
-
-```julia
-pipeline = ProcessingPipeline([
-    PipelineStep(:dc_removal, Dict{Symbol, String}()),
-    PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "16")),
-    PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "9")),
-])
+```@docs
+PipelineStep
+ProcessingPipeline
+run_pipeline
+load_workflow
+run_workflow
 ```
 
 ## Preprocessing
 
-### `GainParams`
-
-Fields:
-
-- `mode::String`
-- `window_samples::Int`
-- `slope_per_sample::Float64`
-- `exponent::Float64`
-
-Example:
-
-```julia
-output = process(traces, GainParams(mode = "agc", window_samples = 32))
+```@docs
+GainParams
+MuteParams
+DcRemovalParams
+TraceEditingParams
 ```
-
-### `MuteParams`
-
-Fields:
-
-- `top_samples::Int`
-- `bottom_samples::Int`
-- `taper_fraction::Float64`
-
-### `DcRemovalParams`
-
-Fields:
-
-- `enabled::Bool`
-
-### `TraceEditingParams`
-
-Fields:
-
-- `kill_threshold::Float64`
-- `reverse_samples::Bool`
-- `pad_samples::Int`
-- `resample_stride::Int`
 
 ## Filtering
 
-### `BandpassParams`
-
-Fields:
-
-- `lowcut_hz::Float64`
-- `highcut_hz::Float64`
-- `smoothing_samples::Int`
-
-### `NotchFilterParams`
-
-- `noise_period_samples::Int`
-
-### `FkFilterParams`
-
-- `spatial_window::Int`
-
-### `MedianFilterParams`
-
-- `spatial_window::Int`
+```@docs
+BandpassParams
+NotchFilterParams
+FkFilterParams
+MedianFilterParams
+```
 
 ## Deconvolution
 
-### `SpikingDeconParams`
-
-- `prewhitening::Float64`
-
-### `PredictiveDeconParams`
-
-- `prediction_gap_samples::Int`
-
-### `WienerFilterParams`
-
-- `window_samples::Int`
-
-### `WaveletEstimationParams`
-
-- `window_samples::Int`
+```@docs
+SpikingDeconParams
+PredictiveDeconParams
+WienerFilterParams
+WaveletEstimationParams
+```
 
 ## Geometry
 
-### `NavMergeParams`
-
-- `overwrite_existing::Bool`
-
-### `BinningParams`
-
-- `bin_size_meters::Float64`
-
-### `SortingParams`
-
-- `key::Symbol`
-
-### `OffsetCalculationParams`
-
-- `coordinate_scale::Float64`
+```@docs
+NavMergeParams
+BinningParams
+SortingParams
+OffsetCalculationParams
+```
 
 ## Velocity
 
-### `SemblanceParams`
-
-- `window_samples::Int`
-
-### `NmoCorrectionParams`
-
-- `velocity_m_per_s::Float64`
-- `stretch_mute_limit::Float64`
-
-Example:
-
-```julia
-offset_traces = process(traces, OffsetCalculationParams())
-corrected = process(offset_traces, NmoCorrectionParams(velocity_m_per_s = 1500.0))
+```@docs
+VelocityModel1D
+VelocityModel2D
+SemblanceParams
+NmoCorrectionParams
 ```
 
-## Stacking
+## Stacking And Migration
 
-### `MeanStackParams`
-
-- `method::String`
-
-### `DiversityStackParams`
-
-- `trim_fraction::Float64`
-
-## Migration
-
-### `KirchhoffMigrationParams`
-
-- `aperture_traces::Int`
-
-### `FkMigrationParams`
-
-- `spatial_window::Int`
-
-## Attributes
-
-### `EnvelopeParams`
-
-- `store_key::Symbol`
-
-### `InstantaneousPhaseParams`
-
-- `unwrap_phase::Bool`
-
-### `InstantaneousFreqParams`
-
-- `sample_interval_seconds::Float64`
-
-### `RmsAmplitudeParams`
-
-- `window_samples::Int`
-
-### `ReflectionStrengthParams`
-
-- `power::Float64`
-
-Example:
-
-```julia
-envelope = process(traces, EnvelopeParams())
-phase = process(traces, InstantaneousPhaseParams())
-rms_amp = process(traces, RmsAmplitudeParams(window_samples = 8))
+```@docs
+MeanStackParams
+DiversityStackParams
+KirchhoffMigrationParams
+FkMigrationParams
 ```
 
-## Workflow Example
+## Seismic Attributes
 
-```toml
-[[steps]]
-name = "dc_removal"
+```@docs
+EnvelopeParams
+InstantaneousPhaseParams
+InstantaneousFreqParams
+RmsAmplitudeParams
+ReflectionStrengthParams
+```
 
-[[steps]]
-name = "gain"
-mode = "linear"
-slope_per_sample = 0.002
+## Example Pipeline
 
-[[steps]]
-name = "semblance"
-window_samples = 12
+```@example processing
+sample_count = 64
+trace = Trace(
+    TraceHeader(sample_count = sample_count, sample_interval_microseconds = 250),
+    [sin(0.15 * i) for i in 1:sample_count],
+)
 
-[[steps]]
-name = "mean_stack"
-method = "mean"
+dataset = Dataset(
+    BinaryHeader(samples_per_trace = sample_count, original_samples_per_trace = sample_count),
+    rpad("C 1 PROCESS", 3200),
+    SegyModel.ExtendedTextHeader(String[]),
+    [trace],
+    SurveyGeometry(line_name = "process"),
+)
+
+pipeline = ProcessingPipeline([
+    PipelineStep(:dc_removal, Dict{Symbol, String}()),
+    PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "8")),
+    PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "5")),
+    PipelineStep(:envelope, Dict{Symbol, String}()),
+])
+
+output = run_pipeline(dataset, pipeline)
+length(output.traces)
 ```

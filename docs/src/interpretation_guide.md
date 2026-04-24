@@ -1,118 +1,77 @@
+```@meta
+CurrentModule = SubBottomProfiler
+```
+
 # Interpretation Guide
+
+```@setup interpretation
+using SubBottomProfiler
+```
 
 The interpretation layer builds on processed traces and explicit pick objects.
 
-## Horizon Picks
+## Pick Types
 
-`HorizonPick` stores:
-
-- `trace_index`
-- `sample_index`
-- `confidence`
-- `provenance`
-
-This keeps picks structured and trace-aware instead of using raw arrays.
-
-## Water-Bottom Picking
-
-Use `pick_water_bottom` to locate the first strong event within a limited sample window:
-
-```julia
-water_bottom = pick_water_bottom(
-    traces,
-    WaterBottomPickerParams(search_end_sample = 128),
-)
+```@docs
+HorizonPick
+HorizonPickerParams
+LayerTrackerParams
+ReflectorStrengthParams
+SeismicFaciesParams
+WaterBottomPickerParams
+VelocityAnalysisParams
 ```
 
-## Horizon Picking
+## Core Interpretation Functions
 
-Use `pick_horizon` to search for the strongest event inside a given window:
-
-```julia
-picks = pick_horizon(
-    traces,
-    HorizonPickerParams(search_start_sample = 20, search_end_sample = 220),
-)
-```
-
-## Layer Tracking
-
-Use `track_layers` to smooth picks by limiting inter-trace jumps:
-
-```julia
-tracked = track_layers(picks, LayerTrackerParams(max_jump_samples = 4))
-```
-
-## Reflector Strength
-
-Use `reflector_strength` to measure RMS amplitude around each pick:
-
-```julia
-strength = reflector_strength(
-    traces,
-    tracked,
-    ReflectorStrengthParams(window_samples = 8),
-)
-```
-
-## Facies Classification
-
-The built-in facies classifier supports:
-
-- rule-based thresholding
-- a user-supplied callable model
-
-Rule-based example:
-
-```julia
-labels = classify_facies(traces, SeismicFaciesParams(envelope_threshold = 0.5))
-```
-
-Model-based example:
-
-```julia
-my_model(samples) = maximum(abs.(samples)) > 1.0 ? "reflective" : "transparent"
-labels = classify_facies(traces, SeismicFaciesParams(); model = my_model)
-```
-
-## Velocity Analysis
-
-Use `analyse_velocity` to derive simplified velocity picks from semblance-like measures:
-
-```julia
-velocity_picks = analyse_velocity(traces, VelocityAnalysisParams(window_samples = 16))
-```
-
-## Interpretation Export
-
-Supported export targets:
-
-- `.csv`
-- `.geojson`
-- `.shp`
-
-Example:
-
-```julia
-export_interpretation("picks.csv", tracked)
-export_interpretation("picks.geojson", tracked)
+```@docs
+pick_horizon
+pick_water_bottom
+track_layers
+reflector_strength
+classify_facies
+analyse_velocity
+export_interpretation
 ```
 
 ## Typical Interpretation Sequence
 
-```julia
+```@example interpretation
+sample_count = 96
+trace = Trace(
+    TraceHeader(sample_count = sample_count, sample_interval_microseconds = 250),
+    [sin(0.12 * i) + (i == 24 ? 2.0 : 0.0) + (i == 56 ? 1.0 : 0.0) for i in 1:sample_count],
+)
+
+dataset = Dataset(
+    BinaryHeader(samples_per_trace = sample_count, original_samples_per_trace = sample_count),
+    rpad("C 1 INTERPRET", 3200),
+    SegyModel.ExtendedTextHeader(String[]),
+    [trace],
+    SurveyGeometry(line_name = "interpret"),
+)
+
 processed = run_pipeline(
     dataset,
     ProcessingPipeline([
         PipelineStep(:dc_removal, Dict{Symbol, String}()),
-        PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "16")),
-        PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "7")),
+        PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "8")),
+        PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "5")),
     ]),
 )
 
-water_bottom = pick_water_bottom(processed.traces, WaterBottomPickerParams(search_end_sample = 96))
-picks = pick_horizon(processed.traces, HorizonPickerParams(search_start_sample = 20, search_end_sample = 220))
+water_bottom = pick_water_bottom(processed.traces, WaterBottomPickerParams(search_end_sample = 32))
+picks = pick_horizon(processed.traces, HorizonPickerParams(search_start_sample = 20, search_end_sample = 80))
 tracked = track_layers(picks, LayerTrackerParams(max_jump_samples = 3))
 strength = reflector_strength(processed.traces, tracked, ReflectorStrengthParams(window_samples = 8))
-export_interpretation("tracked.csv", tracked)
+
+(length(water_bottom), length(tracked), length(strength))
+```
+
+## Interpretation Export
+
+```@example interpretation
+export_path = tempname() * ".csv"
+export_interpretation(export_path, tracked)
+isfile(export_path)
 ```

@@ -1,4 +1,12 @@
+```@meta
+CurrentModule = SubBottomProfiler
+```
+
 # SEG-Y Format Support
+
+```@setup segy
+using SubBottomProfiler
+```
 
 ## Implemented Coverage
 
@@ -18,7 +26,7 @@ Supported sample formats:
 
 ## Binary Header
 
-The `BinaryHeader` struct stores:
+The [`BinaryHeader`](@ref) struct stores:
 
 - sample interval in microseconds
 - sample count per trace
@@ -27,28 +35,16 @@ The `BinaryHeader` struct stores:
 - fixed-length trace flag
 - extended text header count
 
-Example:
+See [`BinaryHeader`](@ref) for the data type. The low-level binary-header I/O functions are documented here:
 
-```julia
-header = BinaryHeader(
-    sample_interval_microseconds = 250,
-    samples_per_trace = 256,
-    data_sample_format = 5,
-)
-```
-
-Low-level round-trip:
-
-```julia
-io = IOBuffer()
-write_binary_header(io, header)
-seekstart(io)
-parsed = parse_binary_header(read(io, 400))
+```@docs
+parse_binary_header
+write_binary_header
 ```
 
 ## Trace Header
 
-The `TraceHeader` struct stores representative per-trace fields:
+The [`TraceHeader`](@ref) struct stores representative per-trace fields:
 
 - trace sequence numbers
 - field-record linkage
@@ -58,65 +54,48 @@ The `TraceHeader` struct stores representative per-trace fields:
 - sample interval
 - scaling and coordinate units
 
-Example:
+See [`TraceHeader`](@ref) for the data type. The low-level trace-header I/O functions are documented here:
 
-```julia
-trace_header = TraceHeader(
-    trace_sequence_line = 1,
-    trace_sequence_file = 1,
-    source_x = 1000,
-    source_y = 2000,
-    group_x = 1010,
-    group_y = 2020,
-    sample_count = 512,
-    sample_interval_microseconds = 250,
-)
+```@docs
+parse_trace_header
+write_trace_header
 ```
 
-## Reading A File
+## Reading And Writing Files
 
-```julia
-dataset = read_segy("line.segy")
-
-println(dataset.binary_header.data_sample_format)
-println(dataset.binary_header.samples_per_trace)
-println(dataset.traces[1].header.sample_count)
-```
-
-## Writing A File
-
-```julia
-write_segy("line_out.segy", dataset)
+```@docs
+read_segy
+write_segy
 ```
 
 ## Sample Conversion
 
-The IBM conversion helpers are exported from the root package and should be the single conversion path:
+The IBM conversion helpers are exported from the root package and are the canonical conversion path used by the I/O layer.
 
-```julia
-word = ieee2ibm(1.25)
-value = ibm2ieee(word)
+```@docs
+ibm2ieee
+ieee2ibm
 ```
 
 ## Navigation Parsing
 
-Navigation input is currently a simplified CSV-like text parser expecting:
+Navigation input is currently exposed from the `SegyIO` submodule and expects a simplified CSV-like record:
 
 ```text
 trace_index,longitude_deg,latitude_deg,ISO8601_timestamp
 ```
 
-Example:
-
-```julia
+```@example segy
 points = SegyIO.parse_navigation([
     "1,12.34,54.32,2024-01-01T00:00:00",
     "2,12.35,54.33,2024-01-01T00:00:01",
 ])
+
+length(points)
 ```
 
 ## Limitations
 
 - not all SEG-Y rev 2 fields are implemented
-- the reader targets the package’s current binary and trace header structs
+- the reader targets the current package structs rather than the full standard surface
 - navigation parsing is intentionally simplified

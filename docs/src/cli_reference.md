@@ -1,6 +1,6 @@
 # CLI Reference
 
-The CLI entry point is [cli/main.jl](/home/mn/projects/sub-bottom-profiler/SubBottomProfiler.jl/cli/main.jl:1).
+The CLI entry point is in `cli/main.jl`.
 
 Basic form:
 
@@ -62,7 +62,7 @@ Pick the water bottom and export picks.
 julia cli/main.jl export input.segy picks.csv
 ```
 
-Supported output formats follow the interpretation export layer:
+Supported output formats:
 
 - `.csv`
 - `.geojson`
@@ -70,20 +70,7 @@ Supported output formats follow the interpretation export layer:
 
 ## Workflow Files
 
-Example workflow:
+See the example workflows:
 
-```toml
-[[steps]]
-name = "dc_removal"
-
-[[steps]]
-name = "gain"
-mode = "agc"
-window_samples = 16
-
-[[steps]]
-name = "bandpass"
-smoothing_samples = 7
-```
-
-See [docs/workflows/basic_processing.toml](/home/mn/projects/sub-bottom-profiler/SubBottomProfiler.jl/docs/workflows/basic_processing.toml:1) and [docs/workflows/full_stack_workflow.toml](/home/mn/projects/sub-bottom-profiler/SubBottomProfiler.jl/docs/workflows/full_stack_workflow.toml:1).
+- `docs/workflows/basic_processing.toml`
+- `docs/workflows/full_stack_workflow.toml`

@@ -1,14 +1,37 @@
+```@meta
+CurrentModule = SubBottomProfiler
+```
+
 # SubBottomProfiler.jl
+
+```@setup home
+using SubBottomProfiler
+```
 
 `SubBottomProfiler.jl` provides a scriptable workflow for SEG-Y-based sub-bottom profiler processing and interpretation in Julia.
 
-## What The Package Does
+```@contents
+Depth = 2
+Pages = [
+    "index.md",
+    "getting_started.md",
+    "segy_format.md",
+    "processing_reference.md",
+    "interpretation_guide.md",
+    "cli_reference.md",
+    "api_reference.md",
+]
+```
 
-- reads SEG-Y data into typed Julia structs
-- applies pure processing steps trace-by-trace or dataset-by-dataset
-- supports in-memory and TOML-driven workflows
-- provides interpretation helpers for picking and export
-- produces lightweight plot specifications for downstream rendering or export
+## Overview
+
+The package is organized around a layered workflow:
+
+1. Read SEG-Y data into typed Julia structs.
+2. Apply pure processing steps to traces or datasets.
+3. Run interpretation helpers such as water-bottom and horizon picking.
+4. Build visualization specifications and export results.
+5. Orchestrate end-to-end jobs through an in-memory pipeline or a TOML workflow.
 
 ## Main Modules
 
@@ -29,25 +52,49 @@
 
 ## Typical Workflow
 
-```julia
-include("../src/SubBottomProfiler.jl")
-using .SubBottomProfiler
+```@example home
+sample_count = 64
+trace = Trace(
+    TraceHeader(sample_count = sample_count, sample_interval_microseconds = 250),
+    [sin(0.2 * i) + (i == 20 ? 1.5 : 0.0) for i in 1:sample_count],
+)
 
-dataset = read_segy("line.segy")
+dataset = Dataset(
+    BinaryHeader(samples_per_trace = sample_count, original_samples_per_trace = sample_count),
+    rpad("C 1 EXAMPLE", 3200),
+    SegyModel.ExtendedTextHeader(String[]),
+    [trace],
+    SurveyGeometry(line_name = "example"),
+)
 
 processed = run_pipeline(
     dataset,
     ProcessingPipeline([
         PipelineStep(:dc_removal, Dict{Symbol, String}()),
-        PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "16")),
-        PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "7")),
+        PipelineStep(:gain, Dict{Symbol, String}(:mode => "agc", :window_samples => "8")),
+        PipelineStep(:bandpass, Dict{Symbol, String}(:smoothing_samples => "5")),
     ]),
 )
 
-picks = pick_water_bottom(processed.traces, WaterBottomPickerParams(search_end_sample = 128))
+picks = pick_water_bottom(processed.traces, WaterBottomPickerParams(search_end_sample = 32))
 plot = seismic_section(processed.traces)
-export_interpretation("water_bottom.csv", picks)
-export_figure("section.svg", plot)
+
+(length(processed.traces), length(picks), plot.kind)
 ```
 
-See the repository [README.md](/home/mn/projects/sub-bottom-profiler/SubBottomProfiler.jl/README.md) for a fuller walk-through.
+## Package Entry Points
+
+Key user-facing exports include:
+
+- data model types such as [`TraceHeader`](@ref), [`BinaryHeader`](@ref), [`Trace`](@ref), and [`Dataset`](@ref)
+- I/O functions such as [`read_segy`](@ref) and [`write_segy`](@ref)
+- processing entry points such as [`process`](@ref), [`process_dataset`](@ref), and [`run_pipeline`](@ref)
+- interpretation functions such as [`pick_horizon`](@ref) and [`pick_water_bottom`](@ref)
+- visualization builders such as [`wiggle_plot`](@ref) and [`seismic_section`](@ref)
+
+## Navigation
+
+- Start with [Getting Started](@ref).
+- Then see [SEG-Y Format Support](@ref).
+- For algorithm coverage, see [Processing Reference](@ref) and [Interpretation Guide](@ref).
+- For exported docstrings, see [API Reference](@ref).
