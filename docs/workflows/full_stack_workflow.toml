@@ -1,0 +1,23 @@
+[[steps]]
+name = "dc_removal"
+
+[[steps]]
+name = "gain"
+mode = "linear"
+slope_per_sample = 0.002
+
+[[steps]]
+name = "bandpass"
+smoothing_samples = 9
+
+[[steps]]
+name = "semblance"
+window_samples = 12
+
+[[steps]]
+name = "nmo_correction"
+velocity_m_per_s = 1500.0
+
+[[steps]]
+name = "mean_stack"
+method = "mean"

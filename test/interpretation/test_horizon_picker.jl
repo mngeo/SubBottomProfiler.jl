@@ -1,0 +1,16 @@
+@testset "Horizon Picking" begin
+    dataset = synthetic_dataset()
+    picks = pick_horizon(dataset.traces, HorizonPickerParams(search_start_sample=1, search_end_sample=32))
+    tracked = track_layers(picks, LayerTrackerParams(max_jump_samples=2))
+    strengths = reflector_strength(dataset.traces, tracked, ReflectorStrengthParams(window_samples=6))
+    labels = classify_facies(dataset.traces, SeismicFaciesParams(envelope_threshold=0.5))
+    velocities = analyse_velocity(dataset.traces, VelocityAnalysisParams(window_samples=8))
+    path = joinpath(@__DIR__, "..", "fixtures", "picks.csv")
+    export_interpretation(path, picks)
+    @test length(picks) == length(dataset.traces)
+    @test length(tracked) == length(dataset.traces)
+    @test length(strengths) == length(dataset.traces)
+    @test length(labels) == length(dataset.traces)
+    @test length(velocities) == length(dataset.traces)
+    @test isfile(path)
+end

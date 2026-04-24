@@ -1,0 +1,15 @@
+name = "SubBottomProfiler"
+uuid = "54b0dff1-88cd-4ab0-a413-8c465d174f11"
+authors = ["OpenAI Codex"]
+version = "0.1.0"
+
+[deps]
+
+[compat]
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

@@ -1,0 +1,11 @@
+[[steps]]
+name = "dc_removal"
+
+[[steps]]
+name = "gain"
+mode = "agc"
+window_samples = 16
+
+[[steps]]
+name = "bandpass"
+smoothing_samples = 7
