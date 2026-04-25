@@ -95,6 +95,8 @@ CurrentModule = SubBottomProfiler
 ```@docs
 PlotSpec
 wiggle_plot
+wiggle_plot!
+display_wiggle
 seismic_section
 spectrum_plot
 velocity_panel

@@ -20,11 +20,11 @@ The current implementation is a complete, documented scaffold with working tests
 - Simplified SEG-Y I/O for sample formats `1`, `3`, and `5`.
 - A processing registry with representative algorithms across preprocessing, filtering, deconvolution, geometry, velocity, stacking, migration, and attributes.
 - Interpretation helpers for picking, tracking, facies classification, velocity analysis, and export.
-- Lightweight visualization specs and figure export placeholders.
+- Lightweight visualization specs, including real SVG wiggle, seismic-section, spectrum, and velocity-panel rendering.
 - A pipeline engine and TOML-driven workflows.
 - A small CLI for `info`, `process`, `view`, and `export`.
 
-It does not yet provide a full Makie backend, full SEG-Y standard coverage, or production-grade migration/deconvolution implementations. The README examples below are written against the code that exists now.
+It does not yet provide full SEG-Y standard coverage or production-grade migration/deconvolution implementations. The README examples below are written against the code that exists now.
 
 ## Repository Layout
 
@@ -438,14 +438,15 @@ export_interpretation("picks.shp", picks)
 
 ## Visualization
 
-The current implementation returns lightweight `PlotSpec` objects instead of drawing directly. This makes the API usable without a heavy plotting dependency.
+The current implementation returns lightweight `PlotSpec` objects for file export. `wiggle_plot`, `seismic_section`, `spectrum_plot`, and `velocity_panel` render directly to SVG-backed plot content, and `wiggle_plot!` can also render interactively into a `Makie.Axis` when `Makie` is loaded as an optional backend.
 
 ### Create a seismic section
 
 ```julia
 section = seismic_section(dataset.traces)
 println(section.kind)
-println(section.payload[:matrix])
+println(section.metadata[:rendered_columns])
+println(section.metadata[:rendered_rows])
 ```
 
 ### Create wiggle, spectrum, and velocity panel specs
@@ -454,6 +455,25 @@ println(section.payload[:matrix])
 wiggles = wiggle_plot(dataset.traces; scale = 1.2)
 spectrum = spectrum_plot(dataset.traces[1])
 panel = velocity_panel([1450.0, 1500.0, 1550.0])
+```
+
+### Display wiggles interactively with Makie
+
+```julia
+using GLMakie
+using Makie
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+wiggle_plot!(ax, dataset.traces; scale = 1.2)
+fig
+```
+
+Or let the package read the SEG-Y and open the figure directly:
+
+```julia
+using GLMakie
+display_wiggle("Data/sb_a1_a_top25_bandpass_1000_4000_deconvolved.segy"; stride = 40, scale = 1.0)
 ```
 
 ### Add annotations and export
@@ -505,6 +525,12 @@ julia cli/main.jl process demo.segy docs/workflows/basic_processing.toml demo_pr
 julia cli/main.jl view demo.segy
 ```
 
+This writes `demo_quicklook.svg` next to the input file by default. You can also pass an explicit output SVG path:
+
+```bash
+julia cli/main.jl view demo.segy demo_section.svg
+```
+
 ### Export water-bottom picks
 
 ```bash
@@ -541,7 +567,7 @@ Additional package documentation lives under [docs/src](/home/mn/projects/sub-bo
 
 ## Current Limitations
 
-- The plotting layer currently emits `PlotSpec` records rather than rendering full figures in Makie.
+- Only wiggle plots currently have an interactive Makie backend; the other plot builders remain SVG-first.
 - Several processing algorithms are intentionally simplified placeholders suitable for scaffolding, tests, and API examples.
 - SEG-Y support is focused on the implemented headers and formats rather than exhaustive revision-2 coverage.
 - The package is included directly from `src/` in this repository layout instead of being installed from a registry.

@@ -37,7 +37,7 @@ function parse_trace_header(buffer::Vector{UInt8})::TraceHeader
         scalel=Int16(read_i16(69)),
         coordinate_units=Int16(read_i16(89)),
     )
-    return validate_trace_header(header)
+    return header
 end
 
 """

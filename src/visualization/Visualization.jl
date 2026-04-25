@@ -2,6 +2,7 @@ module Visualization
 
 using Statistics
 using ..SegyModel: Trace
+using ..SegyIO: read_segy
 
 include("colormaps.jl")
 include("wiggle_plot.jl")
@@ -12,6 +13,6 @@ include("annotation_overlay.jl")
 include("export_figure.jl")
 
 export SBP_SEISMIC_COLORMAP, SBP_DEPTH_COLORMAP
-export PlotSpec, wiggle_plot, seismic_section, spectrum_plot, velocity_panel, annotation_overlay, export_figure
+export PlotSpec, wiggle_plot, wiggle_plot!, display_wiggle, seismic_section, spectrum_plot, velocity_panel, annotation_overlay, export_figure
 
 end

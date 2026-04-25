@@ -1,5 +1,6 @@
 module Processing
 
+using FFTW
 using Statistics
 using ..Utils: moving_average, cosine_taper, convolve_same, analytic_envelope, hilbert_phase, rms
 using ..SegyModel: Trace, TraceHeader, Dataset, SurveyGeometry, NavigationPoint
@@ -37,7 +38,7 @@ include("attributes/reflection_strength.jl")
 export process, process_dataset, describe_registered_steps, instantiate_registered_step, @register_step
 export GainParams, MuteParams, DcRemovalParams, TraceEditingParams
 export BandpassParams, NotchFilterParams, FkFilterParams, MedianFilterParams
-export SpikingDeconParams, PredictiveDeconParams, WienerFilterParams, WaveletEstimationParams
+export SpikingDeconParams, PredictiveDeconParams, WienerFilterParams, WaveletEstimationParams, EstimatedWavelet, estimate_wavelet, deconvolve_with_wavelet
 export NavMergeParams, BinningParams, SortingParams, OffsetCalculationParams
 export VelocityModel1D, VelocityModel2D, SemblanceParams, NmoCorrectionParams
 export MeanStackParams, DiversityStackParams

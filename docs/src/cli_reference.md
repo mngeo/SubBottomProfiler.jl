@@ -43,16 +43,26 @@ Arguments:
 
 ## `view`
 
-Build a quick-look section specification and print a lightweight summary.
+Build a quick-look section and write it as an SVG file.
 
 ```bash
 julia cli/main.jl view input.segy
 ```
 
-This command currently reports:
+This command writes:
 
-- the generated plot kind
+- `input_quicklook.svg` next to the input file by default
+
+It prints:
+
+- the output SVG path
 - the number of traces in the file
+
+You can also provide an explicit output path:
+
+```bash
+julia cli/main.jl view input.segy quicklook.svg
+```
 
 ## `export`
 

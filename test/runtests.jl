@@ -22,4 +22,6 @@ include("fixtures/generate_synthetic.jl")
     include("interpretation/test_horizon_picker.jl")
     include("interpretation/test_water_bottom.jl")
     include("pipeline/test_pipeline.jl")
+    include("visualization/test_wiggle_plot.jl")
+    include("cli/test_cli_view.jl")
 end
