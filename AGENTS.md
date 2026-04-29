@@ -119,6 +119,105 @@ Detailed file-by-file descriptions are in `README.md`.
   and `@simd` where mathematically safe. Annotate with a comment explaining why it is
   safe.
 
+### Gain-processing conventions
+
+- `GainParams` is the generic gain operator. Use it for:
+  - `mode = "agc"` when local amplitude normalization is explicitly desired
+  - `mode = "linear"` or `mode = "exponential"` for simple display-oriented gain ramps
+- `TvgParams` is the physical time-varying gain operator. Use it when gain must be
+  tied to acquisition geometry and propagation assumptions rather than sample index
+  alone.
+- AGC and TVG are **not interchangeable**. Do not present `GainParams(mode="agc")`
+  as a substitute for `TvgParams` in code, docs, or examples.
+- AGC should be treated as a local normalization step that can suppress relative
+  reflector-amplitude contrasts. In seabed- or reflector-picking workflows, document
+  clearly whether AGC is applied before picking, after picking, or only for display.
+- TVG parameters must remain physically documented:
+  - `sound_velocity_m_per_s` is in meters per second
+  - `reference_depth_m` is in meters
+  - `absorption_db_per_m` is in decibels per meter
+  - any spreading-law exponent must be described as an amplitude-domain exponent
+- If a workflow depends on water-bottom position before depth-aware gain correction,
+  require that dependency explicitly. Do not hide seabed detection or depth reference
+  estimation inside TVG code.
+- If AGC or TVG behavior changes, update:
+  - `README.md`
+  - `docs/src/processing_reference.md`
+  - any affected workflow examples under `docs/` or `README.md`
+
+### Amplitude-thresholding conventions
+
+- `AmplitudeThresholdParams` is the sample-level amplitude muting operator. Use it
+  when weak residual amplitudes should be zeroed or shrunk before later steps such as
+  stacking, AGC, or picking.
+- Treat this step as an amplitude-domain threshold, not a time-window mute. Do not
+  overload `MuteParams` or `TraceEditingParams` to implement the same behavior.
+- `mode = "hard"` should set sub-threshold samples to numerical zero.
+- `mode = "soft"` should attenuate sub-threshold samples toward zero without
+  introducing sign changes.
+- `threshold_percent` must be documented as a percentage of the selected reference.
+- `reference = "trace_max"` and `reference = "trace_rms"` are not equivalent:
+  - `trace_max` is appropriate when preserving only the strongest events is the goal
+  - `trace_rms` is appropriate when thresholding should track broader trace energy
+- In examples and workflows, be explicit about placement:
+  - pre-stack thresholding suppresses low-level energy before coherent stacking
+  - post-stack thresholding acts on already-averaged traces and behaves differently
+- Document the risk that aggressive thresholding can erase weak real reflectors,
+  especially if the result is used for interpretation rather than display-only
+  quick looks.
+
+### Band-pass filtering conventions
+
+- `BandpassParams` is the canonical band-pass filter implementation. Do not describe
+  it as a smoothing proxy in new docs or code comments; it is a real FFT-domain
+  frequency-selective filter.
+- Low and high cutoffs must be specified in hertz. New docstrings, examples, and
+  workflow files must state that explicitly.
+- Filter validity depends on the trace sample interval:
+  - reject or document cutoffs at or above Nyquist
+  - be cautious with cutoffs below the effective frequency resolution of the trace
+  - when discussing results, distinguish between theoretical requested cutoff and
+    practical resolvable cutoff
+- `smoothing_samples` in `BandpassParams` is the taper half-width controlling the
+  transition around low/high cutoff edges. Treat it as part of the spectral taper,
+  not as a time-domain smoothing window.
+- When a workflow combines band-pass filtering with thresholding, stacking, AGC, or
+  picking, document the order explicitly because the order materially affects the
+  outcome.
+- If the implementation or interpretation of `BandpassParams` changes, update:
+  - `README.md`
+  - `docs/src/processing_reference.md`
+  - any affected workflow examples under `docs/` or `README.md`
+
+### Stacking conventions
+
+- `MeanStackParams` is the canonical trace-stacking interface for grouped averaging.
+  Use it instead of ad hoc local stack helpers in package code, docs, or examples.
+- Supported stacking modes must remain explicit:
+  - `mode = "blind"` for non-overlapping bins such as traces `1:10`, `11:20`, `21:30`
+  - `mode = "running"` for sliding windows controlled by `stack_size` and `step_size`
+- Document the distinction between stack window size and step size. A running stack
+  with `stack_size = 10` and `step_size = 1` is not equivalent to a blind 10-trace
+  stack.
+- `method = "mean"` and `method = "median"` have different noise behavior:
+  - `mean` is the default coherent-energy stack
+  - `median` is more robust to isolated outliers but should not be described as the
+    same operation
+- Stacking changes trace count and spatial sampling. Do not describe it as a
+  trace-preserving display filter or as a no-op smoothing step.
+- Output traces from stacking should preserve or attach trace-span metadata needed by
+  later interpretation and export. For grouped stacks this includes, at minimum:
+  - `:stack_fold`
+  - `:stack_start_trace`
+  - `:stack_end_trace`
+- When stacking appears in a workflow, document its order relative to band-pass
+  filtering, amplitude thresholding, AGC, and picking, since moving the stack step
+  changes both amplitudes and interpretation behavior.
+- If stacking behavior or parameters change, update:
+  - `README.md`
+  - `docs/src/processing_reference.md`
+  - any affected workflow examples under `docs/` or `README.md`
+
 ---
 
 ## Interpretation module rules
@@ -139,7 +238,20 @@ Detailed file-by-file descriptions are in `README.md`.
 
 - All plot functions must accept an optional `Makie.Axis` argument so plots can be
   embedded into larger figure layouts. Never create a `Figure` implicitly inside a
-  plotting function.
+  plotting function. The one exception is the explicit convenience helper
+  `display_wiggle(...)`, which is allowed to create and display a `Makie.Figure`
+  because its purpose is interactive screen display rather than plot construction.
+- File-oriented plot builders should return `PlotSpec` values with enough metadata to
+  support later overlays and export logic. For wiggle plots this includes, at minimum,
+  `:trace_count`, `:sample_count`, and any rendering-mode flags needed by downstream
+  helpers.
+- Keep the SVG-backed and Makie-backed wiggle APIs behaviorally aligned. If a wiggle
+  rendering option is added in one backend, update the other backend in the same
+  change unless there is a documented technical reason not to.
+- Wiggle variable-area shading must be controlled through the explicit
+  `shade_side = :positive | :negative | :none` convention. The legacy
+  `fill_positive` keyword may be retained for compatibility, but new examples and new
+  code should use `shade_side`.
 - Default colourmaps are defined in `src/visualization/colormaps.jl`. Do not use
   Makie built-in colourmap names directly in algorithm files—always reference the
   package's exported colourmap constants so they can be changed centrally.

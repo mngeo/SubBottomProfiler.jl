@@ -41,6 +41,8 @@ run_workflow
 
 ```@docs
 GainParams
+AmplitudeThresholdParams
+TvgParams
 MuteParams
 DcRemovalParams
 TraceEditingParams

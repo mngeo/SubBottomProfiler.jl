@@ -15,7 +15,7 @@ Base.@kwdef struct PlotSpec
 end
 
 """
-    wiggle_plot(traces::Vector{Trace}; axis=nothing, scale=1.0, width=1400, height=900, fill_positive=true)
+    wiggle_plot(traces::Vector{Trace}; axis=nothing, scale=1.0, width=1400, height=900, fill_positive=true, shade_side=:positive)
 
 Create a wiggle plot from `traces`.
 
@@ -23,7 +23,12 @@ When `axis === nothing`, this returns a rendered SVG-backed [`PlotSpec`](@ref).
 When `axis` is a `Makie.Axis` and the optional `Makie` extension is loaded, the
 same function renders interactively into that axis and returns the axis.
 
-Example: `wiggle_plot(traces; scale=1.5)`
+`shade_side` selects which lobe is filled for variable-area display and must be
+`:positive`, `:negative`, or `:none`. The legacy `fill_positive` keyword is kept
+for backward compatibility and maps to `shade_side = :positive` when `true` and
+`:none` when `false`.
+
+Example: `wiggle_plot(traces; scale=1.5, shade_side=:negative)`
 """
 function wiggle_plot(
     traces::Vector{Trace};
@@ -32,9 +37,11 @@ function wiggle_plot(
     width::Int=1400,
     height::Int=900,
     fill_positive::Bool=true,
-) 
+    shade_side::Symbol=:positive,
+)
+    resolved_shade_side = _resolve_shade_side(fill_positive, shade_side)
     if axis !== nothing
-        return wiggle_plot!(axis, traces; scale=scale, fill_positive=fill_positive)
+        return wiggle_plot!(axis, traces; scale=scale, fill_positive=fill_positive, shade_side=resolved_shade_side)
     end
 
     sample_count, centered, max_amplitude = _prepare_wiggle_samples(traces; scale=scale)
@@ -64,7 +71,7 @@ function wiggle_plot(
         trace_spacing,
         sample_spacing,
         amplitude_scale,
-        fill_positive,
+        resolved_shade_side,
     )
     return PlotSpec(
         kind=:wiggle,
@@ -78,36 +85,44 @@ function wiggle_plot(
             :trace_count => string(length(traces)),
             :sample_count => string(sample_count),
             :fill_positive => string(fill_positive),
+            :shade_side => string(resolved_shade_side),
         ),
     )
 end
 
 """
-    wiggle_plot!(axis, traces::Vector{Trace}; scale=1.0, fill_positive=true, line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
+    wiggle_plot!(axis, traces::Vector{Trace}; scale=1.0, fill_positive=true, shade_side=:positive, line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
 
 Render `traces` as an interactive wiggle plot into an existing `Makie.Axis`.
 This method requires loading `Makie` and a display backend such as `GLMakie`.
 
+`shade_side` selects which lobe is filled for variable-area display and must be
+`:positive`, `:negative`, or `:none`. The legacy `fill_positive` keyword is kept
+for backward compatibility and maps to `shade_side = :positive` when `true` and
+`:none` when `false`.
+
 Returns the input `axis`.
 
 Example:
-`wiggle_plot!(ax, traces; scale=1.2, fill_positive=true)`
+`wiggle_plot!(ax, traces; scale=1.2, shade_side=:negative)`
 """
 function wiggle_plot!(
     axis,
     traces::Vector{Trace};
     scale::Float64=1.0,
     fill_positive::Bool=true,
+    shade_side::Symbol=:positive,
     line_color=:navy,
     fill_color=(:steelblue, 0.35),
     line_width::Float64=1.0,
 )
     _prepare_wiggle_samples(traces; scale=scale)
+    resolved_shade_side = _resolve_shade_side(fill_positive, shade_side)
     return _wiggle_plot_axis(
         axis,
         traces;
         scale=scale,
-        fill_positive=fill_positive,
+        shade_side=resolved_shade_side,
         line_color=line_color,
         fill_color=fill_color,
         line_width=line_width,
@@ -115,13 +130,17 @@ function wiggle_plot!(
 end
 
 """
-    display_wiggle(path::AbstractString; stride=1, scale=1.0, fill_positive=true, figure_size=(1400, 900), line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
+    display_wiggle(path::AbstractString; stride=1, scale=1.0, fill_positive=true, shade_side=:positive, figure_size=(1400, 900), line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
 
 Read a SEG-Y file at `path`, render a decimated wiggle plot into a new `Makie.Figure`,
 and display it on screen.
 
 This method requires loading `Makie` and a display backend such as `GLMakie`.
-`stride` keeps every `stride`-th trace for interactive display.
+`stride` keeps every `stride`-th trace for interactive display. `shade_side`
+selects which lobe is filled for variable-area display and must be `:positive`,
+`:negative`, or `:none`. The legacy `fill_positive` keyword is kept for backward
+compatibility and maps to `shade_side = :positive` when `true` and `:none` when
+`false`.
 
 Example:
 `display_wiggle("Data/example.segy"; stride=40, scale=1.2)`
@@ -131,6 +150,7 @@ function display_wiggle(
     stride::Int=1,
     scale::Float64=1.0,
     fill_positive::Bool=true,
+    shade_side::Symbol=:positive,
     figure_size::Tuple{Int, Int}=(1400, 900),
     line_color=:navy,
     fill_color=(:steelblue, 0.35),
@@ -142,6 +162,7 @@ function display_wiggle(
         stride=stride,
         scale=scale,
         fill_positive=fill_positive,
+        shade_side=shade_side,
         figure_size=figure_size,
         line_color=line_color,
         fill_color=fill_color,
@@ -150,12 +171,16 @@ function display_wiggle(
 end
 
 """
-    display_wiggle(traces::Vector{Trace}; stride=1, scale=1.0, fill_positive=true, figure_size=(1400, 900), line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
+    display_wiggle(traces::Vector{Trace}; stride=1, scale=1.0, fill_positive=true, shade_side=:positive, figure_size=(1400, 900), line_color=:navy, fill_color=(:steelblue, 0.35), line_width=1.0)
 
 Render `traces` into a new interactive `Makie.Figure` and display it on screen.
 `stride` keeps every `stride`-th trace for interactive display.
 
 This method requires loading `Makie` and a display backend such as `GLMakie`.
+`shade_side` selects which lobe is filled for variable-area display and must be
+`:positive`, `:negative`, or `:none`. The legacy `fill_positive` keyword is kept
+for backward compatibility and maps to `shade_side = :positive` when `true` and
+`:none` when `false`.
 
 Example:
 `display_wiggle(traces; stride=20, scale=1.1)`
@@ -165,6 +190,7 @@ function display_wiggle(
     stride::Int=1,
     scale::Float64=1.0,
     fill_positive::Bool=true,
+    shade_side::Symbol=:positive,
     figure_size::Tuple{Int, Int}=(1400, 900),
     line_color=:navy,
     fill_color=(:steelblue, 0.35),
@@ -176,12 +202,13 @@ function display_wiggle(
     selected_traces = traces[1:stride:end]
     isempty(selected_traces) && throw(ArgumentError("selected traces must be non-empty"))
     _prepare_wiggle_samples(selected_traces; scale=scale)
+    resolved_shade_side = _resolve_shade_side(fill_positive, shade_side)
     ext = Base.get_extension(parentmodule(@__MODULE__), :SubBottomProfilerMakieExt)
     return _display_wiggle_figure(
         ext,
         selected_traces;
         scale=scale,
-        fill_positive=fill_positive,
+        shade_side=resolved_shade_side,
         figure_size=figure_size,
         line_color=line_color,
         fill_color=fill_color,
@@ -193,7 +220,7 @@ function _wiggle_plot_axis(
     axis,
     traces::Vector{Trace};
     scale::Float64,
-    fill_positive::Bool,
+    shade_side::Symbol,
     line_color,
     fill_color,
     line_width::Float64,
@@ -205,7 +232,7 @@ function _display_wiggle_figure(
     ::Nothing,
     traces::Vector{Trace};
     scale::Float64,
-    fill_positive::Bool,
+    shade_side::Symbol,
     figure_size::Tuple{Int, Int},
     line_color,
     fill_color,
@@ -239,7 +266,7 @@ function _render_wiggle_svg(
     trace_spacing::Float64,
     sample_spacing::Float64,
     amplitude_scale::Float64,
-    fill_positive::Bool,
+    shade_side::Symbol,
 )::String
     svg = IOBuffer()
     write(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"$(width)\" height=\"$(height)\" viewBox=\"0 0 $(width) $(height)\">\n")
@@ -252,8 +279,8 @@ function _render_wiggle_svg(
     for trace_index in eachindex(traces)
         x0 = left + (trace_index - 1) * trace_spacing
         write(svg, "<line x1=\"$(_fmt(x0))\" y1=\"$(_fmt(top))\" x2=\"$(_fmt(x0))\" y2=\"$(_fmt(top + plot_height))\" stroke=\"#f1f5f9\" stroke-width=\"0.5\"/>\n")
-        if fill_positive
-            fill_path = _wiggle_fill_path(traces[trace_index], x0, top, sample_spacing, amplitude_scale)
+        if shade_side != :none
+            fill_path = _wiggle_fill_path(traces[trace_index], x0, top, sample_spacing, amplitude_scale, shade_side)
             write(svg, "<path d=\"$(fill_path)\" fill=\"#8fb8d8\" fill-opacity=\"0.35\" stroke=\"none\"/>\n")
         end
         trace_path = _wiggle_line_path(traces[trace_index], x0, top, sample_spacing, amplitude_scale)
@@ -280,29 +307,52 @@ function _wiggle_line_path(samples::Vector{Float64}, x0::Float64, top::Float64, 
     return String(take!(path))
 end
 
-function _wiggle_fill_path(samples::Vector{Float64}, x0::Float64, top::Float64, sample_spacing::Float64, amplitude_scale::Float64)::String
+function _wiggle_fill_path(
+    samples::Vector{Float64},
+    x0::Float64,
+    top::Float64,
+    sample_spacing::Float64,
+    amplitude_scale::Float64,
+    shade_side::Symbol,
+)::String
     path = IOBuffer()
     started = false
-    previous_positive = false
+    previous_filled = false
     for index in eachindex(samples)
-        amplitude = max(samples[index], 0.0)
+        amplitude = _filled_amplitude(samples[index], shade_side)
         x = x0 + amplitude * amplitude_scale
         y = top + (index - 1) * sample_spacing
-        if amplitude > 0.0 && !started
+        if amplitude != 0.0 && !started
             write(path, "M $(_fmt(x0)) $(_fmt(y)) L $(_fmt(x)) $(_fmt(y)) ")
             started = true
-        elseif amplitude > 0.0
+        elseif amplitude != 0.0
             write(path, "L $(_fmt(x)) $(_fmt(y)) ")
-        elseif started && previous_positive
+        elseif started && previous_filled
             write(path, "L $(_fmt(x0)) $(_fmt(y)) ")
         end
-        previous_positive = amplitude > 0.0
+        previous_filled = amplitude != 0.0
     end
     if started
         last_y = top + (length(samples) - 1) * sample_spacing
         write(path, "L $(_fmt(x0)) $(_fmt(last_y)) Z")
     end
     return String(take!(path))
+end
+
+function _resolve_shade_side(fill_positive::Bool, shade_side::Symbol)::Symbol
+    if shade_side == :positive && !fill_positive
+        return :none
+    end
+    shade_side in (:positive, :negative, :none) || throw(ArgumentError("shade_side must be :positive, :negative, or :none"))
+    return shade_side
+end
+
+_filled_amplitude(sample::Float64, ::Val{:positive}) = max(sample, 0.0)
+_filled_amplitude(sample::Float64, ::Val{:negative}) = min(sample, 0.0)
+_filled_amplitude(sample::Float64, ::Val{:none}) = 0.0
+
+function _filled_amplitude(sample::Float64, shade_side::Symbol)::Float64
+    return _filled_amplitude(sample, Val(shade_side))
 end
 
 _fmt(value::Real)::String = string(round(Float64(value); digits=2))

@@ -9,7 +9,7 @@ function SBP.Visualization._wiggle_plot_axis(
     axis::Makie.Axis,
     traces::Vector{SBP.Trace};
     scale::Float64,
-    fill_positive::Bool,
+    shade_side::Symbol,
     line_color,
     fill_color,
     line_width::Float64,
@@ -23,9 +23,12 @@ function SBP.Visualization._wiggle_plot_axis(
         x0 = Float64(trace_index)
         samples = centered[trace_index]
         x = x0 .+ samples .* amplitude_scale
-        if fill_positive
+        if shade_side == :positive
             positive_x = x0 .+ max.(samples, 0.0) .* amplitude_scale
             Makie.band!(axis, fill(x0, sample_count), positive_x, y; color=fill_color)
+        elseif shade_side == :negative
+            negative_x = x0 .+ min.(samples, 0.0) .* amplitude_scale
+            Makie.band!(axis, fill(x0, sample_count), negative_x, y; color=fill_color)
         end
         Makie.lines!(axis, x, y; color=line_color, linewidth=line_width)
     end
@@ -42,7 +45,7 @@ function SBP.Visualization._display_wiggle_figure(
     ::Module,
     traces::Vector{SBP.Trace};
     scale::Float64,
-    fill_positive::Bool,
+    shade_side::Symbol,
     figure_size::Tuple{Int, Int},
     line_color,
     fill_color,
@@ -54,7 +57,7 @@ function SBP.Visualization._display_wiggle_figure(
         axis,
         traces;
         scale=scale,
-        fill_positive=fill_positive,
+        shade_side=shade_side,
         line_color=line_color,
         fill_color=fill_color,
         line_width=line_width,

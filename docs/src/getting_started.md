@@ -51,6 +51,7 @@ processed = run_pipeline(
     dataset,
     ProcessingPipeline([
         PipelineStep(:dc_removal, Dict{Symbol, String}()),
+        PipelineStep(:tvg, Dict{Symbol, String}(:sound_velocity_m_per_s => "1520.0", :reference_depth_m => "0.5")),
         PipelineStep(:gain, Dict{Symbol, String}(:mode => "linear", :slope_per_sample => "0.002")),
         PipelineStep(:envelope, Dict{Symbol, String}()),
     ]),
@@ -82,6 +83,21 @@ export_interpretation(picks_path, picks)
 
 (isfile(figure_path), isfile(picks_path))
 ```
+
+## Create And Inspect A Wiggle Plot
+
+```@example getting_started
+wiggles = wiggle_plot(processed.traces; scale = 1.1, shade_side = :positive)
+
+(wiggles.kind, wiggles.format, wiggles.metadata[:shade_side])
+```
+
+For interactive display, load `Makie` and a backend such as `GLMakie`, then either:
+
+- call `wiggle_plot!(ax, traces; shade_side = :positive)` for embedding into an existing layout
+- call `display_wiggle("line.segy"; stride = 20, shade_side = :negative)` for a quick on-screen inspection window
+
+Use `shade_side = :none` when you want line wiggles without variable-area fill.
 
 ## Next Steps
 

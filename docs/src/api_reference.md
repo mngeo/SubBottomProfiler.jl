@@ -92,6 +92,10 @@ CurrentModule = SubBottomProfiler
 
 ## Visualization
 
+`wiggle_plot`, `wiggle_plot!`, and `display_wiggle` share the same wiggle-rendering
+options. In particular, `shade_side = :positive | :negative | :none` controls
+variable-area fill consistently across SVG export and the optional Makie backend.
+
 ```@docs
 PlotSpec
 wiggle_plot
@@ -101,6 +105,7 @@ seismic_section
 spectrum_plot
 velocity_panel
 annotation_overlay
+seabed_overlay
 export_figure
 ```
 

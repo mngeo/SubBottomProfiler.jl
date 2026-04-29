@@ -31,7 +31,7 @@ export twtt_to_depth, depth_to_twtt, meters_per_second_to_feet_per_second, feet_
 export TraceHeader, BinaryHeader, Trace, Dataset, SurveyGeometry, NavigationPoint
 export read_segy, write_segy, ibm2ieee, ieee2ibm, write_binary_header, parse_binary_header, write_trace_header, parse_trace_header
 export process, process_dataset
-export GainParams, MuteParams, DcRemovalParams, TraceEditingParams
+export GainParams, AmplitudeThresholdParams, TvgParams, MuteParams, DcRemovalParams, TraceEditingParams
 export BandpassParams, NotchFilterParams, FkFilterParams, MedianFilterParams
 export SpikingDeconParams, PredictiveDeconParams, WienerFilterParams, WaveletEstimationParams, EstimatedWavelet, estimate_wavelet, deconvolve_with_wavelet
 export NavMergeParams, BinningParams, SortingParams, OffsetCalculationParams
@@ -43,7 +43,7 @@ export RmsAmplitudeParams, ReflectionStrengthParams
 export HorizonPick, HorizonPickerParams, LayerTrackerParams, ReflectorStrengthParams
 export SeismicFaciesParams, WaterBottomPickerParams, VelocityAnalysisParams
 export pick_horizon, pick_water_bottom, track_layers, reflector_strength, classify_facies, analyse_velocity, export_interpretation
-export PlotSpec, wiggle_plot, wiggle_plot!, display_wiggle, seismic_section, spectrum_plot, velocity_panel, annotation_overlay, export_figure
+export PlotSpec, wiggle_plot, wiggle_plot!, display_wiggle, seismic_section, spectrum_plot, velocity_panel, annotation_overlay, seabed_overlay, export_figure
 export ProcessingPipeline, PipelineStep, run_pipeline, load_workflow, run_workflow
 
 end

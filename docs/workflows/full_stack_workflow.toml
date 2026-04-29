@@ -21,3 +21,5 @@ velocity_m_per_s = 1500.0
 [[steps]]
 name = "mean_stack"
 method = "mean"
+mode = "blind"
+stack_size = 10

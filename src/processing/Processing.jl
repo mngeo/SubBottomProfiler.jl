@@ -7,6 +7,8 @@ using ..SegyModel: Trace, TraceHeader, Dataset, SurveyGeometry, NavigationPoint
 
 include("registry.jl")
 include("preprocess/gain.jl")
+include("preprocess/amplitude_threshold.jl")
+include("preprocess/tvg.jl")
 include("preprocess/mute.jl")
 include("preprocess/dc_removal.jl")
 include("preprocess/trace_editing.jl")
@@ -36,7 +38,7 @@ include("attributes/rms_amplitude.jl")
 include("attributes/reflection_strength.jl")
 
 export process, process_dataset, describe_registered_steps, instantiate_registered_step, @register_step
-export GainParams, MuteParams, DcRemovalParams, TraceEditingParams
+export GainParams, AmplitudeThresholdParams, TvgParams, MuteParams, DcRemovalParams, TraceEditingParams
 export BandpassParams, NotchFilterParams, FkFilterParams, MedianFilterParams
 export SpikingDeconParams, PredictiveDeconParams, WienerFilterParams, WaveletEstimationParams, EstimatedWavelet, estimate_wavelet, deconvolve_with_wavelet
 export NavMergeParams, BinningParams, SortingParams, OffsetCalculationParams

@@ -2,14 +2,27 @@
     dataset = synthetic_dataset(trace_count=12, sample_count=48)
     plot = wiggle_plot(dataset.traces; scale=1.0, width=800, height=500)
     annotated = annotation_overlay(plot, ["water bottom", "reflector"])
+    picks = [HorizonPick(index, 12 + mod(index, 4), 1.0, "test") for index in 1:length(dataset.traces)]
+    overlayed = seabed_overlay(plot, picks; color="#dc2626", label="Synthetic seabed")
     path = joinpath(@__DIR__, "..", "fixtures", "wiggle.svg")
-    export_figure(path, annotated)
+    export_figure(path, overlayed)
     content = read(path, String)
     @test plot.kind == :wiggle
     @test plot.format == :svg
+    @test plot.metadata[:shade_side] == "positive"
     @test occursin("<svg", content)
     @test occursin("<path", content)
-    @test occursin("water bottom", content)
+    @test occursin("<polyline", content)
+    @test occursin("Synthetic seabed", content)
+    @test overlayed.metadata[:seabed_overlay] == "true"
+    @test_throws ArgumentError seabed_overlay(plot, picks[1:end-1])
+    negative_plot = wiggle_plot(dataset.traces; scale=1.0, width=800, height=500, shade_side=:negative)
+    @test negative_plot.metadata[:shade_side] == "negative"
+    @test occursin("fill=\"#8fb8d8\"", negative_plot.content)
+    unfilled_plot = wiggle_plot(dataset.traces; scale=1.0, width=800, height=500, shade_side=:none)
+    @test unfilled_plot.metadata[:shade_side] == "none"
+    @test !occursin("fill=\"#8fb8d8\"", unfilled_plot.content)
+    @test_throws ArgumentError wiggle_plot(dataset.traces; scale=1.0, shade_side=:both)
 
     struct DummyAxis end
     @test_throws ArgumentError wiggle_plot!(DummyAxis(), dataset.traces; scale=1.0)
@@ -19,7 +32,7 @@
     local makie_loaded = false
     try
         @eval using Makie
-        makie_loaded = true
+        makie_loaded = Base.get_extension(SubBottomProfiler, :SubBottomProfilerMakieExt) !== nothing
     catch
         makie_loaded = false
     end
@@ -29,6 +42,8 @@
         rendered_axis = wiggle_plot!(ax, dataset.traces; scale=1.0, fill_positive=true)
         @test rendered_axis === ax
         @test wiggle_plot(dataset.traces; axis=ax, scale=1.0) === ax
+        ax_negative = Makie.Axis(fig[1, 2])
+        @test wiggle_plot!(ax_negative, dataset.traces; scale=1.0, shade_side=:negative) === ax_negative
         displayed = display_wiggle(dataset.traces; stride=3, scale=1.0, figure_size=(800, 500))
         @test displayed isa Makie.Figure
     end
@@ -42,6 +57,7 @@
     @test section.metadata[:rendered_columns] == "12"
     @test occursin("<svg", section_content)
     @test occursin("<rect", section_content)
+    @test_throws ArgumentError seabed_overlay(section, picks)
 
     spectrum = spectrum_plot(dataset.traces[1]; width=700, height=400, max_bins=32)
     spectrum_path = joinpath(@__DIR__, "..", "fixtures", "spectrum.svg")

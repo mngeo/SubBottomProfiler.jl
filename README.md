@@ -48,11 +48,11 @@ The primary user-facing exports are:
 - I/O:
   `read_segy`, `write_segy`, `parse_binary_header`, `write_binary_header`, `parse_trace_header`, `write_trace_header`, `ibm2ieee`, `ieee2ibm`
 - Processing:
-  `process`, `process_dataset`, plus parameter structs such as `GainParams`, `BandpassParams`, `NmoCorrectionParams`, `MeanStackParams`, and `EnvelopeParams`
+  `process`, `process_dataset`, plus parameter structs such as `GainParams`, `TvgParams`, `BandpassParams`, `NmoCorrectionParams`, `MeanStackParams`, and `EnvelopeParams`
 - Interpretation:
   `pick_horizon`, `pick_water_bottom`, `track_layers`, `reflector_strength`, `classify_facies`, `analyse_velocity`, `export_interpretation`
 - Visualization:
-  `wiggle_plot`, `seismic_section`, `spectrum_plot`, `velocity_panel`, `annotation_overlay`, `export_figure`
+  `wiggle_plot`, `wiggle_plot!`, `display_wiggle`, `seismic_section`, `spectrum_plot`, `velocity_panel`, `annotation_overlay`, `seabed_overlay`, `export_figure`
 - Pipeline:
   `PipelineStep`, `ProcessingPipeline`, `run_pipeline`, `load_workflow`, `run_workflow`
 - Utilities:
@@ -208,7 +208,8 @@ The original trace vector is not mutated. `process_dataset(dataset, params)` wra
 ```julia
 traces_1 = process(dataset.traces, DcRemovalParams())
 traces_2 = process(traces_1, GainParams(mode = "agc", window_samples = 16))
-traces_3 = process(traces_2, BandpassParams(smoothing_samples = 9))
+traces_3 = process(traces_2, TvgParams(sound_velocity_m_per_s = 1520.0, reference_depth_m = 0.5))
+traces_4 = process(traces_3, BandpassParams(smoothing_samples = 9))
 ```
 
 ### Process a full dataset
@@ -223,6 +224,10 @@ processed_dataset = process_dataset(dataset, GainParams(mode = "linear", slope_p
 
 - `GainParams`
   `mode = "agc" | "linear" | "exponential"`
+- `AmplitudeThresholdParams`
+  per-sample hard zeroing or soft thresholding relative to trace max amplitude or RMS
+- `TvgParams`
+  physical time-varying gain using sample interval, sound velocity, spreading compensation, and optional absorption
 - `MuteParams`
   Top and bottom sample muting with cosine tapers.
 - `DcRemovalParams`
@@ -236,6 +241,11 @@ Example:
 edited = process(
     dataset.traces,
     TraceEditingParams(reverse_samples = true, resample_stride = 2, pad_samples = 16),
+)
+
+thresholded = process(
+    dataset.traces,
+    AmplitudeThresholdParams(mode = "hard", threshold_percent = 2.0, reference = "trace_max"),
 )
 ```
 
@@ -308,7 +318,8 @@ semblance_traces = process(dataset.traces, SemblanceParams(window_samples = 8))
 Example:
 
 ```julia
-stacked = process(dataset.traces, MeanStackParams(method = "mean"))
+stacked = process(dataset.traces, MeanStackParams(method = "mean", mode = "blind", stack_size = 10))
+running = process(dataset.traces, MeanStackParams(method = "mean", mode = "running", stack_size = 10, step_size = 1))
 migrated = process(dataset.traces, KirchhoffMigrationParams(aperture_traces = 2))
 ```
 
@@ -438,7 +449,26 @@ export_interpretation("picks.shp", picks)
 
 ## Visualization
 
-The current implementation returns lightweight `PlotSpec` objects for file export. `wiggle_plot`, `seismic_section`, `spectrum_plot`, and `velocity_panel` render directly to SVG-backed plot content, and `wiggle_plot!` can also render interactively into a `Makie.Axis` when `Makie` is loaded as an optional backend.
+The visualization layer supports two complementary paths:
+
+- file-oriented rendering through lightweight `PlotSpec` objects
+- interactive on-screen rendering through an optional `Makie` extension
+
+`wiggle_plot`, `seismic_section`, `spectrum_plot`, and `velocity_panel` render directly to SVG-backed `PlotSpec` content for export. `wiggle_plot!` renders interactively into an existing `Makie.Axis`, and `display_wiggle(...)` opens a new `Makie.Figure` for quick inspection when `Makie` and a backend such as `GLMakie` are loaded.
+
+For wiggle plots, the package now supports explicit variable-area shading control:
+
+- `shade_side = :positive`
+  fills the positive lobe of each centered trace
+- `shade_side = :negative`
+  fills the negative lobe of each centered trace
+- `shade_side = :none`
+  disables variable-area fill and draws line wiggles only
+
+The older `fill_positive` keyword is still accepted for backward compatibility. It maps to:
+
+- `fill_positive = true` -> `shade_side = :positive`
+- `fill_positive = false` -> `shade_side = :none`
 
 ### Create a seismic section
 
@@ -452,7 +482,9 @@ println(section.metadata[:rendered_rows])
 ### Create wiggle, spectrum, and velocity panel specs
 
 ```julia
-wiggles = wiggle_plot(dataset.traces; scale = 1.2)
+wiggles = wiggle_plot(dataset.traces; scale = 1.2, shade_side = :positive)
+negative_wiggles = wiggle_plot(dataset.traces; scale = 1.2, shade_side = :negative)
+line_only_wiggles = wiggle_plot(dataset.traces; scale = 1.2, shade_side = :none)
 spectrum = spectrum_plot(dataset.traces[1])
 panel = velocity_panel([1450.0, 1500.0, 1550.0])
 ```
@@ -465,7 +497,16 @@ using Makie
 
 fig = Figure()
 ax = Axis(fig[1, 1])
-wiggle_plot!(ax, dataset.traces; scale = 1.2)
+wiggle_plot!(ax, dataset.traces; scale = 1.2, shade_side = :negative)
+fig
+```
+
+The same interactive API also supports line-only display:
+
+```julia
+fig = Figure()
+ax = Axis(fig[1, 1])
+wiggle_plot!(ax, dataset.traces; scale = 1.0, shade_side = :none)
 fig
 ```
 
@@ -473,7 +514,12 @@ Or let the package read the SEG-Y and open the figure directly:
 
 ```julia
 using GLMakie
-display_wiggle("Data/sb_a1_a_top25_bandpass_1000_4000_deconvolved.segy"; stride = 40, scale = 1.0)
+display_wiggle(
+    "Data/sb_a1_a_top25_bandpass_1000_4000_deconvolved.segy";
+    stride = 40,
+    scale = 1.0,
+    shade_side = :positive,
+)
 ```
 
 ### Add annotations and export
@@ -484,6 +530,29 @@ export_figure("section.svg", annotated)
 export_figure("section.pdf", annotated)
 export_figure("section.png", annotated)
 ```
+
+### Overlay a picked seabed on a wiggle plot
+
+```julia
+picks = pick_water_bottom(dataset.traces, WaterBottomPickerParams(search_end_sample = 64))
+wiggles = wiggle_plot(dataset.traces; scale = 1.2, shade_side = :positive)
+with_seabed = seabed_overlay(wiggles, picks; color = "#dc2626", label = "Water bottom")
+export_figure("wiggle_with_seabed.svg", with_seabed)
+```
+
+### Inspect wiggle metadata
+
+Rendered wiggle plots store a few useful values in `PlotSpec.metadata`:
+
+```julia
+wiggles = wiggle_plot(dataset.traces; scale = 1.2, shade_side = :negative)
+
+println(wiggles.metadata[:trace_count])
+println(wiggles.metadata[:sample_count])
+println(wiggles.metadata[:shade_side])
+```
+
+This is useful when post-processing SVG-backed plots or validating exported quick-look products.
 
 ## Utilities
 

@@ -44,7 +44,7 @@ The package is organized around a layered workflow:
 - `Interpretation`
   Horizon picking, water-bottom picking, layer tracking, facies classification, velocity analysis, and interpretation export.
 - `Visualization`
-  Lightweight `PlotSpec` builders and export helpers.
+  Lightweight `PlotSpec` builders, wiggle/seismic renderers, overlay helpers, and export helpers.
 - `Pipeline`
   Processing pipelines and TOML workflow execution.
 - `Utils`
@@ -90,7 +90,23 @@ Key user-facing exports include:
 - I/O functions such as [`read_segy`](@ref) and [`write_segy`](@ref)
 - processing entry points such as [`process`](@ref), [`process_dataset`](@ref), and [`run_pipeline`](@ref)
 - interpretation functions such as [`pick_horizon`](@ref) and [`pick_water_bottom`](@ref)
-- visualization builders such as [`wiggle_plot`](@ref) and [`seismic_section`](@ref)
+- visualization builders such as [`wiggle_plot`](@ref), [`wiggle_plot!`](@ref), [`display_wiggle`](@ref), and [`seismic_section`](@ref)
+
+## Visualization Notes
+
+The package supports both export-oriented and interactive visualization workflows:
+
+- [`wiggle_plot`](@ref) returns an SVG-backed `PlotSpec` for export and post-processing.
+- [`wiggle_plot!`](@ref) renders directly into an existing `Makie.Axis` when the optional
+  `Makie` extension is loaded.
+- [`display_wiggle`](@ref) is the screen-display convenience helper that opens a
+  `Makie.Figure` for a SEG-Y file or trace collection.
+
+Wiggle variable-area shading is controlled with `shade_side`:
+
+- `:positive` fills the positive lobe
+- `:negative` fills the negative lobe
+- `:none` disables fill
 
 ## Navigation
 
