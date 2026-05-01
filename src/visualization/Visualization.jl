@@ -1,9 +1,10 @@
 module Visualization
 
 using Statistics
+using ..Utils: twtt_to_depth
 using ..SegyModel: Trace
 using ..SegyIO: read_segy
-using ..Interpretation: HorizonPick
+using ..Interpretation: HorizonPick, WaterBottomPickResult
 
 include("colormaps.jl")
 include("wiggle_plot.jl")

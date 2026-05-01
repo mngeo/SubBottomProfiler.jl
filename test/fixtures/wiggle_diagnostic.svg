@@ -70,6 +70,12 @@
 <text x="80.0" y="26" font-family="Helvetica,Arial,sans-serif" font-size="20" fill="#102a43">SubBottomProfiler wiggle plot</text>
 <text x="420.0" y="482.0" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#486581">Trace index</text>
 <text x="20" y="235.0" transform="rotate(-90 20 235.0)" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#486581">Sample index</text>
-<polyline points="80.0,139.57 141.82,147.87 203.64,156.17 265.45,131.28 327.27,139.57 389.09,147.87 450.91,156.17 512.73,131.28 574.55,139.57 636.36,147.87 698.18,156.17 760.0,131.28 " fill="none" stroke="#dc2626" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="24" y="88" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#dc2626">Synthetic seabed</text>
+<polyline points="80.0,139.57 141.82,147.87 203.64,156.17 265.45,131.28 327.27,139.57 389.09,147.87 " fill="none" stroke="#b91c1c" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="450.91,156.17 512.73,131.28 " fill="none" stroke="#b91c1c" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="574.55,139.57 636.36,147.87 698.18,156.17 760.0,131.28 " fill="none" stroke="#f59e0b" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8 6"/>
+<polyline points="574.55,181.06 636.36,189.36 698.18,197.66 760.0,181.06 " fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="3 5"/>
+<text x="24" y="88" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#b91c1c">Water bottom pick</text>
+<text x="24" y="106" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#f59e0b">Extrapolated continuation</text>
+<text x="24" y="124" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#2563eb">Alternative deeper candidate</text>
+<text x="24" y="142.0" font-family="Helvetica,Arial,sans-serif" font-size="10" fill="#9f1239">Synthetic extrapolation warning</text>
 </svg>

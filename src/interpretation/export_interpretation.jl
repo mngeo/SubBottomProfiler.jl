@@ -31,3 +31,32 @@ function export_interpretation(path::AbstractString, picks::Vector{HorizonPick})
     end
     return path
 end
+
+"""
+    export_interpretation(path::AbstractString, result::WaterBottomPickResult) -> String
+
+Export a diagnostic water-bottom picking result. CSV exports include alternative
+candidate picks when present.
+
+Example: `export_interpretation("water_bottom.csv", result)`
+"""
+function export_interpretation(path::AbstractString, result::WaterBottomPickResult)::String
+    if endswith(lowercase(path), ".csv")
+        alternative_by_trace = Dict(pick.trace_index => pick for pick in result.alternative_picks)
+        open(path, "w") do io
+            write(io, "trace_index,primary_sample_index,primary_confidence,primary_provenance,alternative_sample_index,alternative_confidence,alternative_provenance\n")
+            for pick in result.primary_picks
+                alternative = get(alternative_by_trace, pick.trace_index, nothing)
+                primary_sample = pick.provenance == "auto_continuity_unresolved" ? "" : string(pick.sample_index)
+                primary_confidence = pick.provenance == "auto_continuity_unresolved" ? "" : string(pick.confidence)
+                if isnothing(alternative)
+                    write(io, "$(pick.trace_index),$(primary_sample),$(primary_confidence),$(pick.provenance),,,\n")
+                else
+                    write(io, "$(pick.trace_index),$(primary_sample),$(primary_confidence),$(pick.provenance),$(alternative.sample_index),$(alternative.confidence),$(alternative.provenance)\n")
+                end
+            end
+        end
+        return path
+    end
+    return export_interpretation(path, result.primary_picks)
+end

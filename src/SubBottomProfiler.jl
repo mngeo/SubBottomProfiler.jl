@@ -41,8 +41,9 @@ export KirchhoffMigrationParams, FkMigrationParams
 export EnvelopeParams, InstantaneousPhaseParams, InstantaneousFreqParams
 export RmsAmplitudeParams, ReflectionStrengthParams
 export HorizonPick, HorizonPickerParams, LayerTrackerParams, ReflectorStrengthParams
-export SeismicFaciesParams, WaterBottomPickerParams, VelocityAnalysisParams
-export pick_horizon, pick_water_bottom, track_layers, reflector_strength, classify_facies, analyse_velocity, export_interpretation
+export SeismicFaciesParams, WaterBottomPickerParams, SegmentedWaterBottomPickerParams, VelocityAnalysisParams
+export WaterBottomPickResult, WaterBottomWindow, WaterBottomWindowEstimatorParams
+export pick_horizon, pick_water_bottom, pick_water_bottom_result, pick_water_bottom_segmented, pick_water_bottom_segmented_result, pick_water_bottom_adaptive, pick_water_bottom_adaptive_result, estimate_water_bottom_windows, track_layers, reflector_strength, classify_facies, analyse_velocity, export_interpretation
 export PlotSpec, wiggle_plot, wiggle_plot!, display_wiggle, seismic_section, spectrum_plot, velocity_panel, annotation_overlay, seabed_overlay, export_figure
 export ProcessingPipeline, PipelineStep, run_pipeline, load_workflow, run_workflow
 
